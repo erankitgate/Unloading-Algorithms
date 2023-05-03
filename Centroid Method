@@ -1,0 +1,79 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <map>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+// Define a struct to represent a box
+struct Box {
+    int id; // Box ID
+    vector<int> adjacent_boxes; // IDs of boxes that are adjacent to this box
+    map<int, double> weights; // Weights of edges connecting this box to its adjacent boxes
+    double x, y, z; // Coordinates of the box's centroid
+};
+
+// Define a function to calculate the distance between two centroids
+double distance(Box b1, Box b2) {
+    double dx = b1.x - b2.x;
+    double dy = b1.y - b2.y;
+    double dz = b1.z - b2.z;
+    return sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+// Define a function to find the shortest path between a source box and a target box using Dijkstra's algorithm
+double dijkstra(vector<Box> boxes, int source, int target) {
+    priority_queue<pair<double, int>, vector<pair<double, int>>, greater<pair<double, int>>> pq; // Priority queue to store unexplored boxes
+    map<int, double> distances; // Map to store shortest distances from the source box to each box
+    for (Box b : boxes) {
+        distances[b.id] = INFINITY;
+    }
+    distances[source] = 0;
+    pq.push(make_pair(0, source));
+    while (!pq.empty()) {
+        int current_box = pq.top().second;
+        pq.pop();
+        for (int adjacent_box : boxes[current_box].adjacent_boxes) {
+            double weight = boxes[current_box].weights[adjacent_box];
+            double new_distance = distances[current_box] + weight;
+            if (new_distance < distances[adjacent_box]) {
+                distances[adjacent_box] = new_distance;
+                pq.push(make_pair(new_distance, adjacent_box));
+            }
+        }
+    }
+    return distances[target];
+}
+
+// Define a function to calculate the minimum number of moves required to access a specific cargo
+int calculate_minimum_moves(vector<Box> boxes, int source_box_id, int target_box_id) {
+    int minimum_moves = 0;
+    // Set the source box as the first box with no moves
+    Box source_box = boxes[source_box_id];
+    source_box.weights[source_box_id] = 0;
+    // Calculate the centroids of all boxes
+    for (Box& b : boxes) {
+        double sum_x = 0, sum_y = 0, sum_z = 0;
+        for (int i = 0; i < 8; i++) {
+            sum_x += b.x;
+            sum_y += b.y;
+            sum_z += b.z;
+        }
+        b.x = sum_x / 8;
+        b.y = sum_y / 8;
+        b.z = sum_z / 8;
+    }
+    // Find adjacent boxes for each box and create the graph
+    for (Box& b1 : boxes) {
+        for (Box& b2 : boxes) {
+            if (b1.id != b2.id && distance(b1, b2) == 1) {
+                b1.adjacent_boxes.push_back(b2.id);
+                b2.adjacent_boxes.push_back(b1.id);
+                b1.weights[b2.id] = distance(b1, b2);
+                b2.weights[b1.id] = distance(b1, b2);
+            }
+        }
+    }
+    // Use Dijkstra's algorithm to find the shortest path between all boxes
