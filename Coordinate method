@@ -1,0 +1,80 @@
+#include <iostream>
+#include <vector>
+#include <unordered_map>
+#include <tuple>
+#include <queue>
+
+using namespace std;
+
+// Define a struct to represent a box with its unique identifier and coordinates
+struct Box {
+    string id;
+    vector<tuple<double, double, double>> coords;
+};
+
+// Define a function to compute the distance between two sets of coordinates
+double computeDistance(vector<tuple<double, double, double>>& coords1, vector<tuple<double, double, double>>& coords2) {
+    double distance = 0.0;
+    for (int i = 0; i < coords1.size(); i++) {
+        distance += sqrt(pow(get<0>(coords1[i]) - get<0>(coords2[i]), 2) + pow(get<1>(coords1[i]) - get<1>(coords2[i]), 2) + pow(get<2>(coords1[i]) - get<2>(coords2[i]), 2));
+    }
+    return distance / coords1.size();
+}
+
+// Define a function to create the graph of boxes and their connections
+unordered_map<string, vector<string>> createGraph(vector<Box>& boxes) {
+    unordered_map<string, vector<string>> graph;
+    for (int i = 0; i < boxes.size(); i++) {
+        // Create a new vertex for the box in the graph
+        graph[boxes[i].id] = {};
+        for (int j = i + 1; j < boxes.size(); j++) {
+            // Check if any coordinates in the two boxes match
+            bool connected = false;
+            for (auto coord1 : boxes[i].coords) {
+                for (auto coord2 : boxes[j].coords) {
+                    if (coord1 == coord2) {
+                        // If a match is found, add an undirected edge between the vertices representing the two boxes in the graph
+                        graph[boxes[i].id].push_back(boxes[j].id);
+                        graph[boxes[j].id].push_back(boxes[i].id);
+                        connected = true;
+                        break;
+                    }
+                }
+                if (connected) break;
+            }
+        }
+    }
+    return graph;
+}
+
+// Define a function to find the shortest path between the source and target boxes
+int findShortestPath(unordered_map<string, vector<string>>& graph, string source, string target) {
+    // Use Dijkstra's algorithm to find the shortest path
+    priority_queue<pair<double, string>, vector<pair<double, string>>, greater<pair<double, string>>> pq;
+    unordered_map<string, double> dist;
+    for (auto node : graph) {
+        dist[node.first] = numeric_limits<double>::max();
+    }
+    dist[source] = 0.0;
+    pq.push(make_pair(0.0, source));
+    while (!pq.empty()) {
+        auto top = pq.top();
+        pq.pop();
+        string current = top.second;
+        double currentDist = top.first;
+        if (current == target) {
+            return round(currentDist);
+        }
+        if (currentDist > dist[current]) {
+            continue;
+        }
+        for (auto neighbor : graph[current]) {
+            double distance = computeDistance(boxesMap[current].coords, boxesMap[neighbor].coords);
+            if (currentDist + distance < dist[neighbor]) {
+                dist[neighbor] = currentDist + distance;
+                pq.push(make_pair(dist[neighbor], neighbor));
+            }
+        }
+    }
+    return -1;
+}
