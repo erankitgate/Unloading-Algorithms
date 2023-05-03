@@ -1,0 +1,94 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <queue>
+
+using namespace std;
+
+struct Box {
+int id; // id of the box
+double x, y, z; // coordinates of the center of the box
+double weight; // weight of the box
+vector<int> adj; // adjacency list for adjacent boxes
+};
+
+// Function to calculate the distance between two boxes
+double distance(Box a, Box b) {
+double dx = a.x - b.x;
+double dy = a.y - b.y;
+double dz = a.z - b.z;
+return sqrt(dxdx + dydy + dz*dz);
+}
+
+// Function to create adjacency list for a box
+vector<int> createAdjList(Box curr, vector<Box> boxes) {
+vector<int> adjList;
+for (Box b : boxes) {
+if (b.id != curr.id) {
+double dist = distance(curr, b);
+if (dist <= (b.weight + curr.weight)) {
+adjList.push_back(b.id);
+}
+}
+}
+return adjList;
+}
+
+// Function to find the shortest path using Dijkstra's algorithm
+double dijkstra(Box start, Box end, vector<Box> boxes) {
+int n = boxes.size();
+vector<double> dist(n, INFINITY);
+vector<bool> visited(n, false);
+priority_queue<pair<double,int>, vector<pair<double,int>>, greater<pair<double,int>>> pq;
+pq.push({0, start.id});
+dist[start.id] = 0;
+while (!pq.empty()) {
+int u = pq.top().second;
+pq.pop();
+if (visited[u]) {
+continue;
+}
+visited[u] = true;
+for (int v : boxes[u].adj) {
+double w = distance(boxes[u], boxes[v]);
+if (dist[u] + w < dist[v]) {
+dist[v] = dist[u] + w;
+pq.push({dist[v], v});
+}
+}
+}
+return dist[end.id];
+}
+
+// Function to calculate the minimum number of cargo moves required to access a specific cargo
+// using the Plus Method
+int calculateMoves(vector<Box> boxes, int startID, int endID) {
+// Create a graph where each box is a node, and edges connect adjacent boxes
+for (Box& b : boxes) {
+b.adj = createAdjList(b, boxes);
+}
+// Identify the starting and ending boxes
+Box start, end;
+for (Box b : boxes) {
+    if (b.id == startID) {
+        start = b;
+    }
+    if (b.id == endID) {
+        end = b;
+    }
+}
+
+// Use Dijkstra's algorithm to find the shortest path between the starting container
+// and the target box, taking into account the weights or distances associated with each edge
+double dist = dijkstra(start, end, boxes);
+
+// If the target box is adjacent to the starting container, no boxes need to be removed,
+// and the shortest path will have a length of one
+if (dist <= (start.weight + end.weight)) {
+    return 1;
+}
+
+// Find the minimal number of boxes required to remove from the containers to pick up
+// the target box, which will be equal to the number of boxes on the shortest path,
+// excluding the target box
+return static_cast<int>(dist / (start.weight + end.weight)) + 1;
